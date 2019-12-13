@@ -8,3 +8,4 @@ clean:
 	server
 astyle:
 	astyle --style=allman server.c
+	rm *.orig
