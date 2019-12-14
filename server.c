@@ -1,9 +1,11 @@
 /*Программа-сервер на UDP сокете. Временно: принимает строку от одного клиента
 разделяет её на составляющие. Если лексемы удовлетворяют ряду критериев, то
 клиент отсылается сообщение OK, иначе клиенту ничего не передается.*/
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -17,25 +19,34 @@ struct message
 };
 struct message mess_in;
 struct message mess_out;
+
+int file_descript;
+
 void check_tokens(char **);
 void string_tokens(char *, char **, int *);
+void handler_sigterm(int, siginfo_t *, void *);
 
 int main(int argc, char const *argv[])
 {
+    struct sigaction signal_sigtrem;
     struct sockaddr_in client;
     struct sockaddr_in server;
-    int file_descript;
     int count_token;
     int i;
     char *tokens[3];
     socklen_t addr_in_size = sizeof(struct sockaddr_in);
 
+    signal_sigtrem.sa_flags = 0;
+    sigemptyset(&signal_sigtrem.sa_mask);
+    signal_sigtrem.sa_sigaction = handler_sigterm;
+    sigaction(SIGTERM, &signal_sigtrem, NULL);
 
     server.sin_family = AF_INET;
     server.sin_port = htons(8888);
     inet_aton("127.0.0.1", &server.sin_addr);
     file_descript = socket(AF_INET, SOCK_DGRAM, 0);
     bind(file_descript, (struct sockaddr *)&server, addr_in_size);
+
     strcpy(mess_out.string, "OK");
     while(1)
     {
@@ -58,15 +69,15 @@ int main(int argc, char const *argv[])
 ная strtok_r. */
 void string_tokens(char *string, char **tokens, int *count_token)
 {
-  int i;
-  char *savestr;
-  tokens[0] = strtok_r(string, ", ", &savestr);
-  *count_token = 1;
-  for(i = 1; (i < 4) && (tokens[i-1] != NULL); i++)
-  {
-      tokens[i] = strtok_r(NULL, ", ", &savestr);
-      *count_token = *count_token + 1;
-  }
+    int i;
+    char *savestr;
+    tokens[0] = strtok_r(string, ", ", &savestr);
+    *count_token = 1;
+    for(i = 1; (i < 4) && (tokens[i-1] != NULL); i++)
+    {
+        tokens[i] = strtok_r(NULL, ", ", &savestr);
+        *count_token = *count_token + 1;
+    }
 }
 /*Функция обрабатывающая лексемы.
 1. Функция рассматривает 1-ую лексему на то, что она является SET либо GET. Если
@@ -75,37 +86,50 @@ void string_tokens(char *string, char **tokens, int *count_token)
 вые символы заNULLяется указатель на первую лексему.*/
 void check_tokens(char **tokens)
 {
-  int i;
-  int j;
-  int lenght_token;
-  char alfbet[10] = {"0123456789"};
-  if(0 == strcmp(tokens[0], "SET"))
-  {
-    if(NULL != tokens[2])
+    int i;
+    int j;
+    int count_alfbet;
+    int lenght_token;
+    char alfbet[10] = {"0123456789"};
+    if(0 == strcmp(tokens[0], "SET"))
     {
-      lenght_token = strlen(tokens[2]);
-      if(tokens[2][lenght_token-1] == '\n')
-      {
-        lenght_token = lenght_token - 1;
-      }
-      for(i = 0; i < lenght_token; i++)
-      {
-        for(j = 0; j < 10; j++)
+        if((NULL != tokens[2]) && (NULL != tokens[1]))
         {
-          if(alfbet[j] != tokens[2][i])
-          {
-            tokens[0] = NULL;
-          }
+            lenght_token = strlen(tokens[2]);
+            if(tokens[2][lenght_token-1] == '\n')
+            {
+                lenght_token = lenght_token - 1;
+            }
+            for(i = 0; i < lenght_token; i++)
+            {
+                count_alfbet = 0;
+                for(j = 0; j < 10; j++)
+                {
+                    if(alfbet[j] != tokens[2][i])
+                    {
+                        count_alfbet = count_alfbet + 1;
+                    }
+                }
+                if(count_alfbet == 10)
+                {
+                    tokens[0] = NULL;
+                }
+            }
         }
-      }
+        else
+        {
+            tokens[0] = NULL;
+        }
     }
-    else
+    else if(0 != strcmp(tokens[0], "GET"))
     {
-      tokens[0] = NULL;
+        tokens[0] = NULL;
     }
-  }
-  else if(0 != strcmp(tokens[0], "GET"))
-  {
-    tokens[0] = NULL;
-  }
+}
+/*Обработчик сигнала SIGTERM. Если приходит данный сигнал, сервер инициализирует
+свое отключение.*/
+void handler_sigterm(int sig, siginfo_t *si, void *unused)
+{
+    printf("SIGTERM!");
+
 }
