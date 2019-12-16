@@ -1,6 +1,6 @@
 all: server
 server: server.o
-	gcc server.o -o server
+	gcc server.o -pthread -o server
 server.o: server.c
 	gcc -g server.c -c
 clean:
