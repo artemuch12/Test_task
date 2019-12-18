@@ -1,6 +1,9 @@
-/*Программа-сервер на TCP сокете. Временно: принимает строку от одного клиента
-разделяет её на составляющие. Если лексемы удовлетворяют ряду критериев, то
-клиент отсылается сообщение OK, иначе клиенту ничего не передается.*/
+/*Программа-сервер на TCP сокете. При подключении нового клиента открывает отде-
+льный поток для обработки его запросов. В качестве запросов со стороны клиента
+выступает строка, не превышающая 255 символов. При обработке запроса строка де-
+лится на лексемы (или токены). Если лексемы удовлетворяют ряду критериев, то
+клиент отсылается сообщение OK, иначе клиенту ничего не передается.
+Для работы сервера не требуется входных параметров.*/
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +16,9 @@
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+
+
+#define MAX_CLIENT_QUEUE 2
 
 struct message
 {
@@ -52,40 +58,55 @@ int main(int argc, char const *argv[])
     server.sin_port = htons(8888);
     inet_aton("127.0.0.1", &server.sin_addr);
     file_descript = socket(AF_INET, SOCK_STREAM, 0);
+    if(file_descript == 0)
+    {
+      puts("Error: socket");
+      exit(-1);
+    }
     bind(file_descript, (struct sockaddr *)&server, addr_in_size);
-    listen(file_descript, 1);
+    listen(file_descript, MAX_CLIENT_QUEUE);
     sock_recv = (pthread_t *)malloc(1*sizeof(pthread_t));
-    number_pthread = (int *)malloc(1*sizeof(int));
+    pth_file_descript = (int *)malloc(1*sizeof(int));
+    number_pthread =  (int *)malloc(1*sizeof(int));
     number_pthread[counter_pthread] = counter_pthread;
     while(flag != 1)
     {
+
       pth_file_descript[counter_pthread] = accept(file_descript, NULL, NULL);
+
       pthread_create(&sock_recv[counter_pthread], NULL, flow_clients, &number_pthread[counter_pthread]);
+      puts("Error.2");
       counter_pthread++;
       sock_recv = realloc(sock_recv, 1*sizeof(pthread_t));
-      number_pthread = realloc(sock_recv, 1*sizeof(number_pthread));
+      number_pthread = realloc(number_pthread, 1*sizeof(number_pthread));
       number_pthread[counter_pthread] = counter_pthread;
+      pth_file_descript = realloc(pth_file_descript, 1*sizeof(int));
     }
-    for(i = 0; i < counter_pthread+1; i++)
+    if(counter_pthread > 0)
     {
-      pthread_join(pth_file_descript[i], NULL);
+      for(i = 0; i < counter_pthread; i++)
+      {
+        pthread_cancel(pth_file_descript[i]);
+        pthread_join(pth_file_descript[i], NULL);
+      }
+      for(i = 0; i < counter_pthread; i++)
+      {
+        close(pth_file_descript[i]);
+      }
     }
-    for(i = 0; i < counter_pthread+1; i++)
-    {
 
-      free(&number_pthread[i]);
-      free(&sock_recv[i]);
-      close(pth_file_descript[i]);
-      free(&pth_file_descript[i]);
-    }
     free(sock_recv);
     free(number_pthread);
     free(pth_file_descript);
+    close(file_descript);
     return 0;
 }
 /*Функция разделяющая приходящую строку на лексемы (tokens). Если лексем больше
 трех, то обработаны будут только первые 3. За основу используетя потокобезопас-
-ная strtok_r. */
+ная strtok_r.
+Для работы функции необходимо 3 входных параметра: строка полученная от клиента,
+массив в который будут передоваться разделенные лексемы, и указатель на перемен-
+ную в которой будет хранится количество лексем. Выходных параметров нет.*/
 void string_tokens(char *string, char **tokens, int *count_token)
 {
     int i;
@@ -161,16 +182,19 @@ void *flow_clients(void *data_input)
   int count_token;
   int i;
   char *tokens[3];
+  number_pthread = (int *)data_input;
   recv(pth_file_descript[*number_pthread], &mess_in, sizeof(mess_in), 0);
   string_tokens(mess_in.string, tokens, &count_token);
   check_tokens(tokens);
   if((tokens[0] != NULL) && (count_token > 2))
   {
-      for(i = 0; i < count_token-1; i++)
-      {
-          printf("%s\n", tokens[i]);
-      }
-      strcpy(mess_out.string, "Ok");
-      send(pth_file_descript[*number_pthread], &mess_out, sizeof(mess_out), 0);
+    for(i = 0; i < count_token-1; i++)
+    {
+        printf("%s\n", tokens[i]);
+    }
+    strcpy(mess_out.string, "Ok");
+    send(pth_file_descript[*number_pthread], &mess_out, sizeof(mess_out), 0);
+    count_token = 0;
   }
+  pthread_exit(0);
 }
