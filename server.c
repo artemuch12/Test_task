@@ -4,6 +4,7 @@
 лится на лексемы (или токены). Если лексемы удовлетворяют ряду критериев, то
 клиент отсылается сообщение OK, иначе клиенту ничего не передается.
 Для работы сервера не требуется входных параметров.*/
+#include <malloc.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +20,12 @@
 
 
 #define MAX_CLIENT_QUEUE 2
+#define ERR_SOCKET 1
+#define ERR_MALLOC 2
+#define ERR_REALLOC 4
+#define ERR_CANCEL 8
+#define ERR_JOIN 16
+#define ERR_CLOSE 32
 
 struct message
 {
@@ -28,20 +35,22 @@ struct message mess_in;
 struct message mess_out;
 struct sockaddr_in server;
 
-pthread_t *sock_recv;
+pthread_t *sock_recv = NULL;
 
 int file_descript;
 int flag = 0;
-int *pth_file_descript;
+int *pth_file_descript = NULL;
 
 void check_tokens(char **);
-void string_tokens(char *, char **, int *);
+void string_tokens(char *, char **);
 void handler_sigterm(int, siginfo_t *, void *);
 void *flow_clients(void *);
 
 
 int main(int argc, char const *argv[])
 {
+  void **status;
+  int err;
     struct sigaction signal_sigtrem;
     int i;
     int counter_pthread = 0;
@@ -61,44 +70,85 @@ int main(int argc, char const *argv[])
     if(file_descript == 0)
     {
       puts("Error: socket");
-      exit(-1);
+      exit(ERR_SOCKET);
     }
     bind(file_descript, (struct sockaddr *)&server, addr_in_size);
     listen(file_descript, MAX_CLIENT_QUEUE);
-    sock_recv = (pthread_t *)malloc(1*sizeof(pthread_t));
-    pth_file_descript = (int *)malloc(1*sizeof(int));
-    number_pthread =  (int *)malloc(1*sizeof(int));
+    sock_recv = (pthread_t *)calloc(1, sizeof(pthread_t));
+    if(sock_recv == NULL)
+    {
+      puts("Malloc, sock_recv");
+      exit(ERR_MALLOC);
+    }
+    pth_file_descript = (int *)calloc(1, sizeof(int));
+    if(pth_file_descript == NULL)
+    {
+      puts("Malloc, number_pthread");
+      exit(ERR_MALLOC);
+    }
+    number_pthread =  (int *)calloc(1, sizeof(int));
+    if(number_pthread == NULL)
+    {
+      puts("Malloc, pth_file_descript");
+      exit(ERR_MALLOC);
+    }
     number_pthread[counter_pthread] = counter_pthread;
     while(flag != 1)
     {
 
       pth_file_descript[counter_pthread] = accept(file_descript, NULL, NULL);
-
+      if(pth_file_descript[counter_pthread] == 0)
+      {
+        puts("Error: socket");
+        exit(ERR_SOCKET);
+      }
       pthread_create(&sock_recv[counter_pthread], NULL, flow_clients, &number_pthread[counter_pthread]);
-      puts("Error.2");
       counter_pthread++;
-      sock_recv = realloc(sock_recv, 1*sizeof(pthread_t));
-      number_pthread = realloc(number_pthread, 1*sizeof(number_pthread));
-      number_pthread[counter_pthread] = counter_pthread;
-      pth_file_descript = realloc(pth_file_descript, 1*sizeof(int));
-    }
-    if(counter_pthread > 0)
-    {
-      for(i = 0; i < counter_pthread; i++)
+      sock_recv = realloc(sock_recv, (counter_pthread+1)*sizeof(pthread_t));
+      if(sock_recv == NULL)
       {
-        pthread_cancel(pth_file_descript[i]);
-        pthread_join(pth_file_descript[i], NULL);
+        puts("Realloc, sock_recv");
+        exit(ERR_REALLOC);
       }
-      for(i = 0; i < counter_pthread; i++)
+      number_pthread = realloc(number_pthread, (counter_pthread+1)*sizeof(int));
+      if(number_pthread == NULL)
       {
-        close(pth_file_descript[i]);
+        puts("Realloc, number_pthread");
+        exit(ERR_REALLOC);
       }
-    }
 
+      pth_file_descript = realloc(pth_file_descript, (counter_pthread+1)*sizeof(int));
+      if(pth_file_descript == NULL)
+      {
+        puts("Realloc, pth_file_descript");
+        exit(ERR_REALLOC);
+      }
+      number_pthread[counter_pthread] = counter_pthread;
+    }
+      for(i = 0; i < counter_pthread; i++)
+      {
+        err = pthread_cancel(sock_recv[i]);
+        if(err != 0)
+        {
+          printf("Cancel %d\n", i);
+          exit(ERR_CANCEL);
+        }
+        pthread_join(sock_recv[i], status);
+        if(err != 0)
+        {
+          printf("Join %d\n", i);
+          exit(ERR_JOIN);
+        }
+      }
     free(sock_recv);
     free(number_pthread);
     free(pth_file_descript);
-    close(file_descript);
+    err = close(file_descript);
+    if(err != 0)
+    {
+      printf("PTH_FL");
+      exit(ERR_CLOSE);
+    }
     return 0;
 }
 /*Функция разделяющая приходящую строку на лексемы (tokens). Если лексем больше
@@ -107,16 +157,14 @@ int main(int argc, char const *argv[])
 Для работы функции необходимо 3 входных параметра: строка полученная от клиента,
 массив в который будут передоваться разделенные лексемы, и указатель на перемен-
 ную в которой будет хранится количество лексем. Выходных параметров нет.*/
-void string_tokens(char *string, char **tokens, int *count_token)
+void string_tokens(char *string, char **tokens)
 {
     int i;
     char *savestr;
     tokens[0] = strtok_r(string, ", ", &savestr);
-    *count_token = 1;
-    for(i = 1; (i < 4) && (tokens[i-1] != NULL); i++)
+    for(i = 1; (i < 3) && (tokens[i-1] != NULL); i++)
     {
         tokens[i] = strtok_r(NULL, ", ", &savestr);
-        *count_token = *count_token + 1;
     }
 }
 /*Функция обрабатывающая лексемы.
@@ -152,18 +200,18 @@ void check_tokens(char **tokens)
                 }
                 if(count_alfbet == 10)
                 {
-                    tokens[0] = NULL;
+                    tokens[0][0] = 1;
                 }
             }
         }
         else
         {
-            tokens[0] = NULL;
+            tokens[0][0] = 1;
         }
     }
     else if(0 != strcmp(tokens[0], "GET"))
     {
-        tokens[0] = NULL;
+        tokens[0][0] = 1;
     }
 }
 /*Обработчик сигнала SIGTERM. Если приходит данный сигнал, сервер инициализирует
@@ -179,22 +227,43 @@ void *flow_clients(void *data_input)
   struct message mess_in;
   struct message mess_out;
   int *number_pthread;
-  int count_token;
   int i;
-  char *tokens[3];
+  int err;
+  char *tokens[3] = {NULL, NULL, NULL};
   number_pthread = (int *)data_input;
-  recv(pth_file_descript[*number_pthread], &mess_in, sizeof(mess_in), 0);
-  string_tokens(mess_in.string, tokens, &count_token);
-  check_tokens(tokens);
-  if((tokens[0] != NULL) && (count_token > 2))
+  while(1)
   {
-    for(i = 0; i < count_token-1; i++)
+    err = recv(pth_file_descript[*number_pthread], &mess_in, sizeof(struct message), 0);
+    if(err != -1)
     {
-        printf("%s\n", tokens[i]);
+      printf("recv");
     }
-    strcpy(mess_out.string, "Ok");
-    send(pth_file_descript[*number_pthread], &mess_out, sizeof(mess_out), 0);
-    count_token = 0;
+    string_tokens(mess_in.string, tokens);
+    if(tokens[0] != NULL)
+    {
+      check_tokens(tokens);
+      if(tokens[0][0] != 1)
+      {
+        printf("Ok");
+        strcpy(mess_out.string, "Ok");
+        err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
+        if(err != -1)
+        {
+          printf("recv");
+        }
+      }
+    }
   }
+  err = close(pth_file_descript[*number_pthread]);
+  if(err != 0)
+  {
+    printf("PTH_FL %d\n", *number_pthread);
+    exit(-1);
+  }
+  for(i = 0; i < 3; i++)
+  {
+    free(tokens[i]);
+  }
+  free(tokens);
   pthread_exit(0);
 }
