@@ -7,5 +7,5 @@ clean:
 	rm *.o
 	server
 astyle:
-	astyle --style=allman server.c
+	astyle -K --style=allman server.c
 	rm *.orig
