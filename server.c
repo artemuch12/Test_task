@@ -4,6 +4,7 @@
 лится на лексемы (или токены). Если лексемы удовлетворяют ряду критериев, то
 клиент отсылается сообщение OK, иначе клиенту ничего не передается.
 Для работы сервера не требуется входных параметров.*/
+#include <errno.h>
 #include <malloc.h>
 #include <signal.h>
 #include <stdio.h>
@@ -17,44 +18,22 @@
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include "include/functions.h"
 
-
-#define MAX_CLIENT_QUEUE 2
-#define ERR_SOCKET 1
-#define ERR_MALLOC 2
-#define ERR_REALLOC 4
-#define ERR_CANCEL 8
-#define ERR_JOIN 16
-#define ERR_CLOSE 32
-#define ERR_RECV 64
-#define ERR_SEND 128
-
-
-struct data
-{
-    char key[255];
-    int data;
-};
-struct message
-{
-    char string[255];
-};
 struct message mess_in;
 struct message mess_out;
 struct sockaddr_in server;
-struct data *key_data;
+
+struct rbtree *tree = NULL;
+
 pthread_t *sock_recv = NULL;
 pthread_mutex_t border = PTHREAD_MUTEX_INITIALIZER;
-int file_descript;
 int flag = 0;
+int file_descript;
 int *pth_file_descript = NULL;
-int nomber_nodes = 0;
 
-void check_tokens(char **);
-void string_tokens(char *, char **);
 void handler_sigterm(int, siginfo_t *, void *);
 void *flow_clients(void *);
-
 
 int main(int argc, char const *argv[])
 {
@@ -102,7 +81,7 @@ int main(int argc, char const *argv[])
         exit(ERR_MALLOC);
     }
     number_pthread[counter_pthread] = counter_pthread;
-    key_data = (struct data *)calloc(1, sizeof(struct data));
+
     pthread_mutex_init(&border, NULL);
     while(flag != 1)
     {
@@ -154,6 +133,7 @@ int main(int argc, char const *argv[])
     free(sock_recv);
     free(number_pthread);
     free(pth_file_descript);
+    pthread_mutex_destroy(&border);
     err = close(file_descript);
     if(err != 0)
     {
@@ -162,82 +142,15 @@ int main(int argc, char const *argv[])
     }
     return 0;
 }
-/*Функция разделяющая приходящую строку на лексемы (tokens). Если лексем больше
-трех, то обработаны будут только первые 3. За основу используетя потокобезопас-
-ная strtok_r.
-Для работы функции необходимо 3 входных параметра: строка полученная от клиента,
-массив в который будут передоваться разделенные лексемы, и указатель на перемен-
-ную в которой будет хранится количество лексем. Выходных параметров нет.*/
-void string_tokens(char *string, char **tokens)
-{
-    int i;
-    char *savestr;
-    tokens[0] = strtok_r(string, ", ", &savestr);
-    for(i = 1; (i < 3) && (tokens[i-1] != NULL); i++)
-    {
-        tokens[i] = strtok_r(NULL, ", ", &savestr);
-    }
-}
-/*Функция обрабатывающая лексемы.
-1. Функция рассматривает 1-ую лексему на то, что она является SET либо GET. Если
-лексема не соответсвует данному критерию, то она указатель на неё заNULLяется.
-2. Функция рассматривает 3-ию лексему (в случае SET) если она содержит не цифро-
-вые символы заNULLяется указатель на первую лексему.*/
-void check_tokens(char **tokens)
-{
-    int i;
-    int j;
-    int count_alfbet;
-    int lenght_token;
-    char alfbet[10] = {"0123456789"};
-    if(0 == strcmp(tokens[0], "SET"))
-    {
-        if((NULL != tokens[2]) && (NULL != tokens[1]))
-        {
-            lenght_token = strlen(tokens[2]);
-            if(tokens[2][lenght_token-1] == '\n')
-            {
-                lenght_token = lenght_token - 1;
-            }
-            for(i = 0; i < lenght_token; i++)
-            {
-                count_alfbet = 0;
-                for(j = 0; j < 10; j++)
-                {
-                    if(alfbet[j] != tokens[2][i])
-                    {
-                        count_alfbet = count_alfbet + 1;
-                    }
-                }
-                if(count_alfbet == 10)
-                {
-                    tokens[0][0] = 1;
-                }
-            }
-        }
-        else
-        {
-            tokens[0][0] = 1;
-        }
-    }
-    else if(0 != strcmp(tokens[0], "GET"))
-    {
-        tokens[0][0] = 1;
-    }
-}
-/*Обработчик сигнала SIGTERM. Если приходит данный сигнал, сервер инициализирует
-свое отключение.*/
-void handler_sigterm(int sig, siginfo_t *si, void *unused)
-{
-    printf("SIGTERM!");
-    flag = 1;
-}
+
 /*Функция определяющая работу отдельного потока */
 void *flow_clients(void *data_input)
 {
     struct message mess_in;
     struct message mess_out;
+    struct rbtree *node;
     int *number_pthread;
+    int time_variable;
     int i;
     int flag_search = 0;
     int err;
@@ -248,6 +161,7 @@ void *flow_clients(void *data_input)
         err = recv(pth_file_descript[*number_pthread], &mess_in, sizeof(struct message), 0);
         if(err != -1)
         {
+            perror("Error:");
             printf("Error: recv\n");
             exit(ERR_RECV);
         }
@@ -257,85 +171,39 @@ void *flow_clients(void *data_input)
             check_tokens(tokens);
             if(tokens[0][0] != 1)
             {
-              if((nomber_nodes == 0) && (strcmp(tokens[0], "SET") == 0))
-              {
-                nomber_nodes = nomber_nodes + 1;
-                pthread_mutex_lock(&border);
-                strcpy(key_data[0].key, tokens[1]);
-                key_data[0].data = atoi(tokens[2]);
-                key_data = realloc(key_data, (nomber_nodes+1)*sizeof(struct data));
-                if(key_data == NULL)
+                if(strcmp(tokens[0], "SET") == 0)
                 {
-                    puts("Error: realloc");
-                    exit(ERR_REALLOC);
-                }
-                pthread_mutex_unlock(&border);
-                strcpy(mess_out.string, "Ok");
-                err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
-                if(err != -1)
-                {
-                  printf("Error: send\n");
-                  exit(ERR_SEND);
-                }
-              }
-              else if((nomber_nodes > 0) && (strcmp(tokens[0], "SET") == 0))
-              {
-                pthread_mutex_lock(&border);
-                for(i = 0; (i < nomber_nodes); i++)
-                {
-                  if(0 == strcmp(tokens[1], key_data[i].key))
-                  {
-                    key_data[i].data = atoi(tokens[2]);
-                    strcpy(mess_out.string, "Ok");
-                    err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
-                    if(err != -1)
+                    pthread_mutex_lock(&border);
+                    node = rbtree_adding(tree, tokens[1], atoi(tokens[2]));
+                    pthread_mutex_unlock(&border);
+                    if(node != NULL)
                     {
+                      strcpy(mess_out.string, "Ok");
+                      err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
+                      if(err != -1)
+                      {
+                          printf("Error: send\n");
+                          exit(ERR_SEND);
+                      }
+                    }
+                }
+                else if(strcmp(tokens[0], "GET") == 0)
+                {
+                    pthread_mutex_lock(&border);
+                    node = rbtree_search(tree, tokens[1]);
+                    if(node != NULL)
+                    {
+                      sprintf(mess_out.string, "%d", node->data);
+                    }
+                    pthread_mutex_unlock(&border);
+                }
+                if(node != NULL)
+                {
+                  err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
+                  if(err != -1)
+                  {
                       printf("Error: send\n");
-                      exit(ERR_SEND);
-                    }
-                    flag_search = 1;
                   }
-                }
-                if(flag_search == 1)
-                {
-                  flag_search = 0;
-                }
-                else
-                {
-                  strcpy(key_data[nomber_nodes].key, tokens[1]);
-                  key_data[nomber_nodes].data = atoi(tokens[2]);
-                  key_data = realloc(key_data, (nomber_nodes+1)*sizeof(struct data));
-                  nomber_nodes = nomber_nodes + 1;
-                  if(key_data == NULL)
-                  {
-                      puts("Error: realloc");
-                      exit(ERR_REALLOC);
-                  }
-                }
-                pthread_mutex_unlock(&border);
-              }
-              else if((nomber_nodes >= 0) && (strcmp(tokens[0], "GET") == 0))
-              {
-                pthread_mutex_lock(&border);
-                for(i = 0; (i < nomber_nodes); i++)
-                {
-                  if(0 == strcmp(tokens[1], key_data[i].key))
-                  {
-                    snprintf(mess_out.string, 255, "%d", key_data[i].data);
-                    err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
-                    if(err != -1)
-                    {
-                        printf("recv");
-                    }
-                  }
-                }
-                pthread_mutex_unlock(&border);
-              }
-                strcpy(mess_out.string, "Ok");
-                err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
-                if(err != -1)
-                {
-                    printf("recv");
                 }
             }
         }
@@ -351,6 +219,14 @@ void *flow_clients(void *data_input)
         free(tokens[i]);
     }
     free(tokens);
-    pthread_mutex_destroy(&border);
+
     pthread_exit(0);
+}
+
+/*Обработчик сигнала SIGTERM. Если приходит данный сигнал, сервер инициализирует
+свое отключение.*/
+void handler_sigterm(int sig, siginfo_t *si, void *unused)
+{
+    printf("SIGTERM!");
+    flag = 1;
 }
