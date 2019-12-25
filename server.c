@@ -20,8 +20,6 @@
 #include <sys/types.h>
 #include "include/functions.h"
 
-struct message mess_in;
-struct message mess_out;
 struct sockaddr_in server;
 
 struct rbtree *tree = NULL;
@@ -62,19 +60,19 @@ int main(int argc, char const *argv[])
     }
     bind(file_descript, (struct sockaddr *)&server, addr_in_size);
     listen(file_descript, MAX_CLIENT_QUEUE);
-    sock_recv = (pthread_t *)calloc(1, sizeof(pthread_t));
+    sock_recv = calloc(1, sizeof(pthread_t));
     if(sock_recv == NULL)
     {
         puts("Malloc, sock_recv");
         exit(ERR_MALLOC);
     }
-    pth_file_descript = (int *)calloc(1, sizeof(int));
+    pth_file_descript = calloc(1, sizeof(int));
     if(pth_file_descript == NULL)
     {
         puts("Malloc, number_pthread");
         exit(ERR_MALLOC);
     }
-    number_pthread =  (int *)calloc(1, sizeof(int));
+    number_pthread =  calloc(1, sizeof(int));
     if(number_pthread == NULL)
     {
         puts("Malloc, pth_file_descript");
@@ -123,7 +121,7 @@ int main(int argc, char const *argv[])
             puts("Error: cancel");
             exit(ERR_CANCEL);
         }
-        pthread_join(sock_recv[i], status);
+        err = pthread_join(sock_recv[i], status);
         if(err != 0)
         {
             puts("Error: join");
@@ -133,6 +131,7 @@ int main(int argc, char const *argv[])
     free(sock_recv);
     free(number_pthread);
     free(pth_file_descript);
+    free(tree);
     pthread_mutex_destroy(&border);
     err = close(file_descript);
     if(err != 0)
@@ -150,18 +149,17 @@ void *flow_clients(void *data_input)
     struct message mess_out;
     struct rbtree *node;
     int *number_pthread;
-    int time_variable;
     int i;
     int flag_search = 0;
     int err;
+    int time_variable;
     char *tokens[3] = {NULL, NULL, NULL};
     number_pthread = (int *)data_input;
     while(1)
     {
-        err = recv(pth_file_descript[*number_pthread], &mess_in, sizeof(struct message), 0);
-        if(err != -1)
+        err = recv(pth_file_descript[*number_pthread], &mess_in, sizeof(struct message), 0);/**/
+        if(err == -1)
         {
-            perror("Error:");
             printf("Error: recv\n");
             exit(ERR_RECV);
         }
@@ -173,14 +171,15 @@ void *flow_clients(void *data_input)
             {
                 if(strcmp(tokens[0], "SET") == 0)
                 {
+                    time_variable = atoi(tokens[2]);
                     pthread_mutex_lock(&border);
-                    node = rbtree_adding(tree, tokens[1], atoi(tokens[2]));
+                    tree = rbtree_adding(tree, tokens[1], time_variable);
                     pthread_mutex_unlock(&border);
-                    if(node != NULL)
+                    if(tree != NULL)/**/
                     {
                       strcpy(mess_out.string, "Ok");
                       err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
-                      if(err != -1)
+                      if(err == -1)
                       {
                           printf("Error: send\n");
                           exit(ERR_SEND);
@@ -191,16 +190,16 @@ void *flow_clients(void *data_input)
                 {
                     pthread_mutex_lock(&border);
                     node = rbtree_search(tree, tokens[1]);
-                    if(node != NULL)
+                    pthread_mutex_unlock(&border);
+                    if(node != NULL)/**/
                     {
                       sprintf(mess_out.string, "%d", node->data);
                     }
-                    pthread_mutex_unlock(&border);
                 }
                 if(node != NULL)
                 {
                   err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
-                  if(err != -1)
+                  if(err == -1)
                   {
                       printf("Error: send\n");
                   }

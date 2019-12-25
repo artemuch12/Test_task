@@ -6,9 +6,10 @@ server.o: server.c
 libraris:
 	gcc -g functions.c -c
 	ar -rc libfunctions.a functions.o
-clean:
+clean_obj:
 	rm *.o
-	server
+clean_elf:
+	rm server
 astyle:
 	astyle -K --style=allman server.c
 	astyle -K --style=allman functions.c
