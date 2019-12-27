@@ -49,10 +49,6 @@ void check_tokens(char **tokens)
         if((NULL != tokens[2]) && (NULL != tokens[1]))
         {
             lenght_token = strlen(tokens[2]);
-            if(tokens[2][lenght_token-1] == '\n')
-            {
-                lenght_token = lenght_token - 1;
-            }
             for(i = 0; i < lenght_token; i++)
             {
                 count_alfbet = 0;
@@ -60,7 +56,12 @@ void check_tokens(char **tokens)
                 {
                     if(alfbet[j] != tokens[2][i])
                     {
+
                         count_alfbet = count_alfbet + 1;
+                    }
+                    if('\n' == tokens[2][i])
+                    {
+                        count_alfbet = count_alfbet - 1;
                     }
                 }
                 if(count_alfbet == 10)
@@ -82,207 +83,211 @@ void check_tokens(char **tokens)
 /*Функция поворота налево*/
 struct rbtree *left_rotate(struct rbtree *root, struct rbtree *node)
 {
-  struct rbtree *right = node->right;
-  node->right = right->left;
-  if (right->left != null_node)
-  {
-    right->left->parent = node;
-  }
-  if (right != null_node)
-  {
-    right->parent = node->parent;
-  }
-  if (node->parent != null_node)
-  {
-    if (node == node->parent->left)
+    struct rbtree *right = node->right;
+    node->right = right->left;
+    if (right->left != null_node)
     {
-      node->parent->left = right;
+        right->left->parent = node;
+    }
+    if (right != null_node)
+    {
+        right->parent = node->parent;
+    }
+    if (node->parent != null_node)
+    {
+        if (node == node->parent->left)
+        {
+            node->parent->left = right;
+        }
+        else
+        {
+            node->parent->right = right;
+        }
     }
     else
     {
-      node->parent->right = right;
+        root = right;
     }
-  }
-  else
-  {
-    root = right;
-  }
-  right->left = node;
-  if(node != null_node)
-  {
-    node->parent = right;
-  }
-  return root;
+    right->left = node;
+    if(node != null_node)
+    {
+        node->parent = right;
+    }
+    return root;
 }
 /*Функция поворота направо*/
 struct rbtree *right_rotate(struct rbtree *root, struct rbtree *node)
 {
-  struct rbtree *left = node->left;
-  node->left = left->right;
-  if (left->right != null_node)
-  {
-    left->right->parent = node;
-  }
-  if (left != null_node)
-  {
-    left->parent = node->parent;
-  }
-  if (node->parent != null_node)
-  {
-    if (node == node->parent->right)
+    struct rbtree *left = node->left;
+    node->left = left->right;
+    if (left->right != null_node)
     {
-      node->parent->right = left;
+        left->right->parent = node;
+    }
+    if (left != null_node)
+    {
+        left->parent = node->parent;
+    }
+    if (node->parent != null_node)
+    {
+        if (node == node->parent->right)
+        {
+            node->parent->right = left;
+        }
+        else
+        {
+            node->parent->left = left;
+        }
     }
     else
     {
-      node->parent->left = left;
+        root = left;
     }
-  }
-  else
-  {
-    root = left;
-  }
-  left->right = node;
-  if(node != null_node)
-  {
-    node->parent = left;
-  }
-  return root;
+    left->right = node;
+    if(node != null_node)
+    {
+        node->parent = left;
+    }
+    return root;
 }
 /*Функция вствавки в красно-черное дерево нового узла*/
 struct rbtree *rbtree_adding(struct rbtree *root, char *keys, int data)
 {
-  struct rbtree *node = null_node;
-  struct rbtree *parent = null_node;
+    int lenght;
+    struct rbtree *node = null_node;
+    struct rbtree *parent = null_node;
 
-  for(node = root; (node != null_node) && (node != NULL); )
-  {
-    parent = node;
-    if(0 < strcmp(keys, node->key))
+    for(node = root; (node != null_node) && (node != NULL); )
     {
-      node = node->left;
+        parent = node;
+        if(0 < strcmp(keys, node->key))
+        {
+            node = node->left;
+        }
+        else if(0 > strcmp(keys, node->key))
+        {
+            node = node->right;
+        }
+        else if(0 == strcmp(keys, node->key)) //Если ключ узла совпадает с искомым
+        {
+            //ключом, то его поле дата изменяется,
+            node->data = data;                 //на то значение которое передовалось в
+            root = node;                       //функцию.
+            return root;
+        }
+        else
+        {
+            return root;
+        }
     }
-    else if(0 > strcmp(keys, node->key))
+    node = malloc(sizeof(*node));
+    if(node == NULL)
     {
-      node = node->right;
+        return NULL;
     }
-    else if(0 == strcmp(keys, node->key)) //Если ключ узла совпадает с искомым
-    {                                    //ключом, то его поле дата изменяется,
-      node->data = data;                 //на то значение которое передовалось в
-      root = node;                       //функцию.
-      return root;
-    }
-    else
-    {
-      return root;
-    }
-  }
-  node = malloc(sizeof(*node));
-  if(node == NULL)
-  {
-    return NULL;
-  }
-  node->key = keys;
-  node->data = data;
-  node->color = RED;
-  node->parent = parent;
-  node->left = null_node;
-  node->right = null_node;
-  if(parent != null_node)
-  {
+    lenght = strlen(keys);
+    node->key = malloc(sizeof(char)*lenght);
+    strcpy(node->key, keys);
+    node->data = data;
+    node->color = RED;
+    node->parent = parent;
+    node->left = null_node;
+    node->right = null_node;
     if(parent != null_node)
     {
-      parent->left = node;
+        if(parent != null_node)
+        {
+            parent->left = node;
+        }
+        else
+        {
+            parent->right = node;
+        }
     }
     else
     {
-      parent->right = node;
+        root = node;
     }
-  }
-  else
-  {
-    root = node;
-  }
-  return rbtree_fix_add(root, node);
+    return rbtree_fix_add(root, node);
 }
 /*Функция востановления свойств красно-черного дерева после установки нового
 узла*/
 struct rbtree *rbtree_fix_add(struct rbtree *root, struct rbtree *node)
 {
-  struct rbtree *uncle;
-  while ((node != root) && (node->parent->color == RED))
-  {
-    if(node->parent == node->parent->parent->left)
+    struct rbtree *uncle;
+    while ((node != root) && (node->parent->color == RED))
     {
-      uncle = node->parent->parent->right;
-      if(uncle->color == RED)
-      {
-        node->parent->color = BLACK;
-        uncle->color = BLACK;
-        node->parent->parent->color = RED;
-        node = node->parent->parent;
-      }
-      else
-      {
-        if(node == node->parent->right)
+        if(node->parent == node->parent->parent->left)
         {
-          node = node->parent;
-          root = left_rotate(root, node);
+            uncle = node->parent->parent->right;
+            if(uncle->color == RED)
+            {
+                node->parent->color = BLACK;
+                uncle->color = BLACK;
+                node->parent->parent->color = RED;
+                node = node->parent->parent;
+            }
+            else
+            {
+                if(node == node->parent->right)
+                {
+                    node = node->parent;
+                    root = left_rotate(root, node);
+                }
+                node->parent->color = BLACK;
+                node->parent->parent->color = RED;
+                root = right_rotate(root, node->parent->parent);
+            }
         }
-        node->parent->color = BLACK;
-        node->parent->parent->color = RED;
-        root = right_rotate(root, node->parent->parent);
-      }
-    }
-    else
-    {
-      uncle = node->parent->parent->left;
-      if(uncle->color == RED)
-      {
-        node->parent->color = BLACK;
-        uncle->color = BLACK;
-        node->parent->parent->color = RED;
-        node = node->parent->parent;
-      }
-      else
-      {
-        if(node == node->parent->left)
+        else
         {
-          node = node->parent;
-          root = right_rotate(root, node);
+            uncle = node->parent->parent->left;
+            if(uncle->color == RED)
+            {
+                node->parent->color = BLACK;
+                uncle->color = BLACK;
+                node->parent->parent->color = RED;
+                node = node->parent->parent;
+            }
+            else
+            {
+                if(node == node->parent->left)
+                {
+                    node = node->parent;
+                    root = right_rotate(root, node);
+                }
+                node->parent->color = BLACK;
+                node->parent->parent->color = RED;
+                root = left_rotate(root, node->parent->parent);
+            }
         }
-        node->parent->color = BLACK;
-        node->parent->parent->color = RED;
-        root = left_rotate(root, node->parent->parent);
-      }
     }
-  }
-  root->color = BLACK;
-  return root;
+    root->color = BLACK;
+    return root;
 }
 struct rbtree *rbtree_search(struct rbtree *root, char *keys)
 {
-  struct rbtree *node = null_node;
-  struct rbtree *parent = null_node;
+    struct rbtree *node = null_node;
+    struct rbtree *parent = null_node;
 
-  for(node = root; (node != null_node) && (node != NULL); )
-  {
-    parent = node;
-    if(0 < strcmp(keys, node->key))
+    for(node = root; (node != null_node) && (node != NULL); )
     {
-      node = node->left;
+        parent = node;
+        if(0 < strcmp(keys, node->key))
+        {
+            node = node->left;
+        }
+        else if(0 > strcmp(keys, node->key))
+        {
+            node = node->right;
+        }
+        else if(0 == strcmp(keys, node->key))
+        {
+            return parent;
+        }
+        else
+        {
+            return NULL;
+        }
     }
-    else if(0 > strcmp(keys, node->key))
-    {
-      node = node->right;
-    }
-    else if(0 == strcmp(keys, node->key))
-    {
-      return node;
-    }
-    else
-    {
-      return root;
-    }
-  }
 }

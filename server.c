@@ -177,13 +177,13 @@ void *flow_clients(void *data_input)
                     pthread_mutex_unlock(&border);
                     if(tree != NULL)/**/
                     {
-                      strcpy(mess_out.string, "Ok");
-                      err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
-                      if(err == -1)
-                      {
-                          printf("Error: send\n");
-                          exit(ERR_SEND);
-                      }
+                        strcpy(mess_out.string, "Ok");
+                        err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
+                        if(err == -1)
+                        {
+                            printf("Error: send\n");
+                            exit(ERR_SEND);
+                        }
                     }
                 }
                 else if(strcmp(tokens[0], "GET") == 0)
@@ -193,17 +193,17 @@ void *flow_clients(void *data_input)
                     pthread_mutex_unlock(&border);
                     if(node != NULL)/**/
                     {
-                      sprintf(mess_out.string, "%d", node->data);
+                        sprintf(mess_out.string, "%d", node->data);
+                        err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
+                        if(err == -1)
+                        {
+                            printf("Error: send\n");
+                        }
                     }
                 }
-                if(node != NULL)
-                {
-                  err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
-                  if(err == -1)
-                  {
-                      printf("Error: send\n");
-                  }
-                }
+                tokens[0] = "\0";
+                tokens[1] = "\0";
+                tokens[2] = "\0";
             }
         }
     }
@@ -218,7 +218,7 @@ void *flow_clients(void *data_input)
         free(tokens[i]);
     }
     free(tokens);
-
+    /*Функция очистки дерева*/
     pthread_exit(0);
 }
 
