@@ -18,7 +18,8 @@
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "include/functions.h"
+#include "include/functions_strings.h"
+#include "include/functions_rbtree.h"
 
 struct sockaddr_in server;
 
@@ -66,13 +67,13 @@ int main(int argc, char const *argv[])
         puts("Malloc, sock_recv");
         exit(ERR_MALLOC);
     }
-    pth_file_descript = calloc(1, sizeof(int));
+    pth_file_descript = (int *)calloc(1, sizeof(int));
     if(pth_file_descript == NULL)
     {
         puts("Malloc, number_pthread");
         exit(ERR_MALLOC);
     }
-    number_pthread =  calloc(1, sizeof(int));
+    number_pthread =  (int *)calloc(1, sizeof(int));
     if(number_pthread == NULL)
     {
         puts("Malloc, pth_file_descript");
@@ -128,6 +129,7 @@ int main(int argc, char const *argv[])
             exit(ERR_JOIN);
         }
     }
+    rbtree_delete(tree);
     free(sock_recv);
     free(number_pthread);
     free(pth_file_descript);
@@ -177,7 +179,7 @@ void *flow_clients(void *data_input)
                     pthread_mutex_unlock(&border);
                     if(tree != NULL)/**/
                     {
-                        strcpy(mess_out.string, "Ok");
+                        strcpy(mess_out.string, "Ok\n");
                         err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
                         if(err == -1)
                         {

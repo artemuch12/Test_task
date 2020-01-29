@@ -12,74 +12,11 @@
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "include/functions.h"
+#include "include/functions_rbtree.h"
+#include "include/functions_strings.h"
 
 
-/*Функция разделяющая приходящую строку на лексемы (tokens). Если лексем больше
-трех, то обработаны будут только первые 3. За основу используетя потокобезопас-
-ная strtok_r.
-Для работы функции необходимо 3 входных параметра: строка полученная от клиента,
-массив в который будут передоваться разделенные лексемы, и указатель на перемен-
-ную в которой будет хранится количество лексем. Выходных параметров нет.*/
-void string_tokens(char *string, char **tokens)
-{
-    int i;
-    char *savestr;
-    tokens[0] = strtok_r(string, ", ", &savestr);
-    for(i = 1; (i < 3) && (tokens[i-1] != NULL); i++)
-    {
-        tokens[i] = strtok_r(NULL, ", ", &savestr);
-    }
-}
 
-/*Функция обрабатывающая лексемы.
-1. Функция рассматривает 1-ую лексему на то, что она является SET либо GET. Если
-лексема не соответсвует данному критерию, то она указатель на неё заNULLяется.
-2. Функция рассматривает 3-ию лексему (в случае SET) если она содержит не цифро-
-вые символы заNULLяется указатель на первую лексему.*/
-void check_tokens(char **tokens)
-{
-    int i;
-    int j;
-    int count_alfbet;
-    int lenght_token;
-    char alfbet[10] = {"0123456789"};
-    if(0 == strcmp(tokens[0], "SET"))
-    {
-        if((NULL != tokens[2]) && (NULL != tokens[1]))
-        {
-            lenght_token = strlen(tokens[2]);
-            for(i = 0; i < lenght_token; i++)
-            {
-                count_alfbet = 0;
-                for(j = 0; j < 10; j++)
-                {
-                    if(alfbet[j] != tokens[2][i])
-                    {
-
-                        count_alfbet = count_alfbet + 1;
-                    }
-                    if('\n' == tokens[2][i])
-                    {
-                        count_alfbet = count_alfbet - 1;
-                    }
-                }
-                if(count_alfbet == 10)
-                {
-                    tokens[0][0] = 1;
-                }
-            }
-        }
-        else
-        {
-            tokens[0][0] = 1;
-        }
-    }
-    else if(0 != strcmp(tokens[0], "GET"))
-    {
-        tokens[0][0] = 1;
-    }
-}
 /*Функция поворота налево*/
 struct rbtree *left_rotate(struct rbtree *root, struct rbtree *node)
 {
@@ -160,15 +97,15 @@ struct rbtree *rbtree_adding(struct rbtree *root, char *keys, int data)
     for(node = root; (node != null_node) && (node != NULL); )
     {
         parent = node;
-        if(0 < strcmp(keys, node->key))
+        if(0 < string_compreson(keys, node->key))
         {
             node = node->left;
         }
-        else if(0 > strcmp(keys, node->key))
+        else if(0 > string_compreson(keys, node->key))
         {
             node = node->right;
         }
-        else if(0 == strcmp(keys, node->key)) //Если ключ узла совпадает с искомым
+        else if(0 == string_compreson(keys, node->key)) //Если ключ узла совпадает с искомым
         {
             //ключом, то его поле дата изменяется,
             node->data = data;                 //на то значение которое передовалось в
@@ -265,29 +202,47 @@ struct rbtree *rbtree_fix_add(struct rbtree *root, struct rbtree *node)
     root->color = BLACK;
     return root;
 }
+
+/*Функция поиска узла по ключу*/
+/*Если ключ совпадает с ключом узла, то */
 struct rbtree *rbtree_search(struct rbtree *root, char *keys)
 {
     struct rbtree *node = null_node;
-    struct rbtree *parent = null_node;
-
     for(node = root; (node != null_node) && (node != NULL); )
     {
-        parent = node;
-        if(0 < strcmp(keys, node->key))
+        if(0 < string_compreson(keys, node->key))
         {
             node = node->left;
         }
-        else if(0 > strcmp(keys, node->key))
+        else if(0 > string_compreson(keys, node->key))
         {
             node = node->right;
         }
-        else if(0 == strcmp(keys, node->key))
+        else if(0 == string_compreson(keys, node->key))
         {
-            return parent;
+            return node;
         }
-        else
+    }
+    return NULL;
+}
+
+/*Функция удаления дерева*/
+/*Если указатель (получаемый на входе функции) не пуст, то проверяется на не
+пустоту левый и правый потомки узла. Если один из них не пуст, то его указатель
+передается рекурсивно-вызываемую функцию. После того кого, как удаляются листья,
+то высвобождается память из раннее вызванного узла.*/
+void rbtree_delete(struct rbtree *root)
+{
+    if((root != NULL) && (root != null_node))
+    {
+        if((root->left != NULL) && (root->left != null_node))
         {
-            return NULL;
+            rbtree_delete(root->left);
         }
+        if((root->right != NULL) && (root->right != null_node))
+        {
+            rbtree_delete(root->right);
+        }
+        free(root);
     }
 }
