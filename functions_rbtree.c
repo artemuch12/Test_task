@@ -88,7 +88,7 @@ struct rbtree *right_rotate(struct rbtree *root, struct rbtree *node)
     return root;
 }
 /*Функция вствавки в красно-черное дерево нового узла*/
-struct rbtree *rbtree_adding(struct rbtree *root, char *keys, int data)
+struct rbtree *rbtree_adding(struct rbtree *root, int keys, int data)
 {
     int lenght;
     struct rbtree *node = null_node;
@@ -97,15 +97,15 @@ struct rbtree *rbtree_adding(struct rbtree *root, char *keys, int data)
     for(node = root; (node != null_node) && (node != NULL); )
     {
         parent = node;
-        if(0 < string_compreson(keys, node->key))
+        if(keys < node->key)
         {
             node = node->left;
         }
-        else if(0 > string_compreson(keys, node->key))
+        else if(keys > node->key)
         {
             node = node->right;
         }
-        else if(0 == string_compreson(keys, node->key)) //Если ключ узла совпадает с искомым
+        else if(keys == node->key) //Если ключ узла совпадает с искомым
         {
             //ключом, то его поле дата изменяется,
             node->data = data;                 //на то значение которое передовалось в
@@ -122,9 +122,7 @@ struct rbtree *rbtree_adding(struct rbtree *root, char *keys, int data)
     {
         return NULL;
     }
-    lenght = strlen(keys);
-    node->key = malloc(sizeof(char)*lenght);
-    strcpy(node->key, keys);
+    node->key = keys;
     node->data = data;
     node->color = RED;
     node->parent = parent;
@@ -205,20 +203,20 @@ struct rbtree *rbtree_fix_add(struct rbtree *root, struct rbtree *node)
 
 /*Функция поиска узла по ключу*/
 /*Если ключ совпадает с ключом узла, то */
-struct rbtree *rbtree_search(struct rbtree *root, char *keys)
+struct rbtree *rbtree_search(struct rbtree *root, int keys)
 {
     struct rbtree *node = null_node;
     for(node = root; (node != null_node) && (node != NULL); )
     {
-        if(0 < string_compreson(keys, node->key))
+        if(keys < node->key)
         {
             node = node->left;
         }
-        else if(0 > string_compreson(keys, node->key))
+        else if(keys > node->key)
         {
             node = node->right;
         }
-        else if(0 == string_compreson(keys, node->key))
+        else if(keys == node->key)
         {
             return node;
         }
@@ -235,14 +233,8 @@ void rbtree_delete(struct rbtree *root)
 {
     if((root != NULL) && (root != null_node))
     {
-        if((root->left != NULL) && (root->left != null_node))
-        {
-            rbtree_delete(root->left);
-        }
-        if((root->right != NULL) && (root->right != null_node))
-        {
-            rbtree_delete(root->right);
-        }
+        rbtree_delete(root->left);
+        rbtree_delete(root->right);
         free(root);
     }
 }

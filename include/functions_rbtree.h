@@ -21,7 +21,7 @@
 
 struct rbtree
 {
-  char *key;
+  int key;
   int data;
   int color;
   struct rbtree *parent;
@@ -34,7 +34,7 @@ static struct rbtree *null_node = &empty_node;
 /*Прототипы функция для работы красно-черного дерева*/
 struct rbtree *left_rotate(struct rbtree *, struct rbtree *);
 struct rbtree *right_rotate(struct rbtree *, struct rbtree *);
-struct rbtree *rbtree_adding(struct rbtree *, char *, int );
+struct rbtree *rbtree_adding(struct rbtree *, int, int );
 struct rbtree *rbtree_fix_add(struct rbtree *, struct rbtree *);
-struct rbtree *rbtree_search(struct rbtree *, char *);
+struct rbtree *rbtree_search(struct rbtree *, int);
 void rbtree_delete(struct rbtree *);
