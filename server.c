@@ -84,13 +84,18 @@ int main(int argc, char const *argv[])
         rbtree_print(tree, 1);
         getchar();
       }
+      else if(0 == strncmp(string, "qui\0", 4))
+      {
+        rbtree_delete(tree);
+        flag = 1;
+      }
       else
       {
         puts("Неверная команда!");
       }
     }
 
-    rbtree_delete(tree);
+
 
     return 0;
 }
@@ -106,8 +111,16 @@ void rbtree_print(struct rbtree *root, int counter)
   struct rbtree *node = root;
   if ((node != null_node) && (node != NULL))
   {
-    printf("Уровень: %d; Узел %d; Значение %d\n", counter, node->key,
+    printf("Уровень: %d; Узел %d; Значение %d; ", counter, node->key,
         node->data);
+    if(node->color == 1)
+    {
+      printf("цвет узла: черный\n");
+    }
+    else
+    {
+      printf("цвет узла: красный\n");
+    }
     counter = counter + 1;
     rbtree_print(node->left, counter);
     rbtree_print(node->right, counter);

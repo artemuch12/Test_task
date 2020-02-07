@@ -99,7 +99,6 @@ struct rbtree *rbtree_adding(struct rbtree *root, int keys, int data)
     else
     {
       x->data = data;
-      root = x;
       return root;
     }
   }
