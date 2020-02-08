@@ -35,7 +35,7 @@ int main(int argc, char const *argv[])
     int err;
     struct sigaction signal_sigtrem;
     int i;
-    int keys;
+    char keys[255];
     int value;
     char string[20];
     socklen_t addr_in_size = sizeof(struct sockaddr_in);
@@ -52,7 +52,7 @@ int main(int argc, char const *argv[])
       if(0 == strncmp(string, "set\0", 4))
       {
         puts("Введите ключ:");
-        scanf("%d", &keys);
+        scanf("%s", keys);
         getchar();
         puts("Введите данные:");
         scanf("%d", &value);
@@ -66,11 +66,11 @@ int main(int argc, char const *argv[])
       else if(0 == strncmp(string, "get\0", 4))
       {
         puts("Введите ключ:");
-        scanf("%d", &keys);
+        fgets(keys, 255, stdin);
         node = rbtree_search(tree, keys);
         if(node != NULL)
         {
-          printf("Данные по ключу %d: %d\n", node->key, node->data);
+          printf("Данные по ключу %s: %d\n", node->key, node->data);
           getchar();
         }
         else
@@ -111,7 +111,7 @@ void rbtree_print(struct rbtree *root, int counter)
   struct rbtree *node = root;
   if ((node != null_node) && (node != NULL))
   {
-    printf("Уровень: %d; Узел %d; Значение %d; ", counter, node->key,
+    printf("Уровень: %d; Узел %s; Значение %d; ", counter, node->key,
         node->data);
     if(node->color == 1)
     {

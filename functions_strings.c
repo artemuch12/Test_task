@@ -1,18 +1,10 @@
 /*Исходный файл содержащий реализацию функция отвечающих за обработку строк на
 сервере.*/
 #include <malloc.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+
 #include "include/functions_strings.h"
 
 
@@ -79,52 +71,5 @@ void check_tokens(char **tokens)
     else if(0 != strcmp(tokens[0], "GET"))
     {
         tokens[0][0] = 1;
-    }
-}
-
-/*Функция сравнивает две строки, для определения их соответсвия между ними. На
-первом этапе сравнивается длина строк. Если одна строк длиннее другой, то на
-выход функции отправляется число: -1 если "левая" строка больше "правой", в об-
-ратном случае отпраляется 1. В случае если обе строки равны по длине, то насту-
-пает следующий этап: посимвольное сравнение. Если какой-то либо символ, оказы-
-вается больше, чем в другой строке в аналогичной позиции, то функция возвращает
-единицу, если меньше, то -1. Если после перебора всех символов не находится от-
-личных сиволов, между двумя строками, то функция возвращает 0.*/
-/*Входные данные: 2 строки, заканчивающиеся на символы'/0' и '/n'.*/
-/*Выходные данные: число из ряда: -1, 0, 1*/
-int string_compreson(char *string_1, char *string_2)
-{
-    int len_str_1, len_str_2;
-    int out_data;
-    int counter;
-    int symbol_str_1, symbol_str_2;
-
-    len_str_1 = strlen(string_1);
-    len_str_2 = strlen(string_2);
-
-    if (len_str_1 < len_str_2)
-    {
-        return -1;
-    }
-    if (len_str_1 > len_str_2)
-    {
-        return 1;
-    }
-    if (len_str_1 = len_str_2)
-    {
-        for(counter = 0; counter < len_str_1; counter++)
-        {
-            symbol_str_1 = (int )string_1[counter];
-            symbol_str_2 = (int )string_2[counter];
-            if (symbol_str_1 < symbol_str_2)
-            {
-                return -1;
-            }
-            if (symbol_str_1 > symbol_str_2)
-            {
-                return 1;
-            }
-        }
-        return 0;
     }
 }

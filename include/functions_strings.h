@@ -12,4 +12,3 @@ struct message
 /*Прототипы функций обработки строк*/
 void check_tokens(char **);
 void string_tokens(char *, char **);
-int string_compreson(char *, char *);

@@ -1,19 +1,11 @@
 /*Файл содержащий реализацию всех функций используемых в сервере*/
 #include <malloc.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+
 #include "include/functions_rbtree.h"
-#include "include/functions_strings.h"
+
 
 
 
@@ -78,7 +70,7 @@ struct rbtree *right_rotate(struct rbtree *root, struct rbtree *x)
   }
 }
 /*Функция вствавки в красно-черное дерево нового узла*/
-struct rbtree *rbtree_adding(struct rbtree *root, int keys, int data)
+struct rbtree *rbtree_adding(struct rbtree *root, char *keys, int data)
 {
   struct rbtree *z = NULL;
   struct rbtree *y = NULL;
@@ -88,11 +80,11 @@ struct rbtree *rbtree_adding(struct rbtree *root, int keys, int data)
   while ((x != null_node) && (x != NULL))
   {
     y = x;
-    if(keys < x->key)
+    if(0 < string_compreson(keys, x->key))
     {
       x = x->left;
     }
-    else if(keys > x->key)
+    else if(0 > string_compreson(keys, x->key))
     {
       x = x->right;
     }
@@ -104,7 +96,7 @@ struct rbtree *rbtree_adding(struct rbtree *root, int keys, int data)
   }
   z = malloc(sizeof(*z));
   z->parent = y;
-  z->key = keys;
+  strcpy(z->key, keys);
   z->data = data;
   z->left = null_node;
   z->right = null_node;
@@ -113,7 +105,7 @@ struct rbtree *rbtree_adding(struct rbtree *root, int keys, int data)
   {
     root = z;
   }
-  else if(z->key < y->key)
+  else if(0 < string_compreson(z->key, y->key))
   {
     y->left = z;
   }
@@ -184,20 +176,20 @@ struct rbtree *rbtree_fix_add(struct rbtree *root, struct rbtree *z)
 
 /*Функция поиска узла по ключу*/
 /*Если ключ совпадает с ключом узла, то */
-struct rbtree *rbtree_search(struct rbtree *root, int keys)
+struct rbtree *rbtree_search(struct rbtree *root, char *keys)
 {
     struct rbtree *node = null_node;
     for(node = root; (node != null_node) && (node != NULL); )
     {
-        if(keys < node->key)
+        if(0 < string_compreson(keys, node->key))
         {
             node = node->left;
         }
-        else if(keys > node->key)
+        else if(0 > string_compreson(keys, node->key))
         {
             node = node->right;
         }
-        else if(keys == node->key)
+        else if(0 == string_compreson(keys, node->key))
         {
             return node;
         }
@@ -217,5 +209,77 @@ void rbtree_delete(struct rbtree *root)
         rbtree_delete(root->left);
         rbtree_delete(root->right);
         free(root);
+    }
+}
+/*Функция сравнивает две строки, для определения их соответсвия между ними. На
+первом этапе сравнивается длина строк. Если одна строк длиннее другой, то на
+выход функции отправляется число: -1 если "левая" строка больше "правой", в об-
+ратном случае отпраляется 1. В случае если обе строки равны по длине, то насту-
+пает следующий этап: посимвольное сравнение. Если какой-то либо символ, оказы-
+вается больше, чем в другой строке в аналогичной позиции, то функция возвращает
+единицу, если меньше, то -1. Если после перебора всех символов не находится от-
+личных сиволов, между двумя строками, то функция возвращает 0.*/
+/*Входные данные: 2 строки, заканчивающиеся на символы'/0' и '/n'.*/
+/*Выходные данные: число из ряда: -1, 0, 1*/
+int string_compreson(char *string_1, char *string_2)
+{
+    int len_str_1, len_str_2;
+    int out_data;
+    int counter;
+    int symbol_str_1, symbol_str_2;
+
+    len_str_1 = strlen(string_1);
+    len_str_2 = strlen(string_2);
+
+    if (len_str_1 < len_str_2)
+    {
+      for(counter = 0; counter < len_str_1; counter++)
+      {
+          symbol_str_1 = (int )string_1[counter];
+          symbol_str_2 = (int )string_2[counter];
+          if (symbol_str_1 < symbol_str_2)
+          {
+              return 1;
+          }
+          if (symbol_str_1 > symbol_str_2)
+          {
+              return -1;
+          }
+      }
+      return 1;
+    }
+    if (len_str_1 > len_str_2)
+    {
+      for(counter = 0; counter < len_str_2; counter++)
+      {
+          symbol_str_1 = (int )string_1[counter];
+          symbol_str_2 = (int )string_2[counter];
+          if (symbol_str_1 < symbol_str_2)
+          {
+              return 1;
+          }
+          if (symbol_str_1 > symbol_str_2)
+          {
+              return -1;
+          }
+      }
+      return -1;
+    }
+    if (len_str_1 == len_str_2)
+    {
+      for(counter = 0; counter < len_str_1; counter++)
+      {
+          symbol_str_1 = (int )string_1[counter];
+          symbol_str_2 = (int )string_2[counter];
+          if (symbol_str_1 < symbol_str_2)
+          {
+              return 1;
+          }
+          if (symbol_str_1 > symbol_str_2)
+          {
+              return -1;
+          }
+      }
+      return 0;
     }
 }
