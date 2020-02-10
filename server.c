@@ -36,7 +36,7 @@ void *flow_clients(void *);
 
 int main(int argc, char const *argv[])
 {
-    void **status;
+    void **status = NULL;
     int err;
     struct sigaction signal_sigtrem;
     int i;
@@ -52,7 +52,14 @@ int main(int argc, char const *argv[])
 
     server.sin_family = AF_INET;
     server.sin_port = htons(8888);
-    inet_aton("127.0.0.1", &server.sin_addr);
+    if((argc == 1) || (argc > 2))
+    {
+      inet_aton("127.0.0.1", &server.sin_addr);
+    }
+    if(argc == 2)
+    {
+      inet_aton(argv[2], &server.sin_addr);
+    }
     file_descript = socket(AF_INET, SOCK_STREAM, 0);
     if(file_descript == 0)
     {
@@ -155,9 +162,12 @@ void *flow_clients(void *data_input)
     int flag_search = 0;
     int err;
     int time_variable;
-    char *tokens[3] = {NULL, NULL, NULL};
+    int count_tokens;
+    int counter;
+    char **tokens = NULL;
     number_pthread = (int *)data_input;
-    while(1)
+    node = null_node;
+    while(flag != 1)
     {
         err = recv(pth_file_descript[*number_pthread], &mess_in, sizeof(struct message), 0);/**/
         if(err == -1)
@@ -165,49 +175,47 @@ void *flow_clients(void *data_input)
             printf("Error: recv\n");
             exit(ERR_RECV);
         }
-        string_tokens(mess_in.string, tokens);
-        if(tokens[0] != NULL)
+        count_tokens = string_counter_token(mess_in.string);
+        tokens = string_checking(mess_in.string, count_tokens);
+        if(0 == strcmp(tokens[0], "SET"))
         {
-            check_tokens(tokens);
-            if(tokens[0][0] != 1)
-            {
-                if(strcmp(tokens[0], "SET") == 0)
-                {
-                    time_variable = atoi(tokens[2]);
-                    pthread_mutex_lock(&border);
-                    tree = rbtree_adding(tree, tokens[1], time_variable);
-                    pthread_mutex_unlock(&border);
-                    if(tree != NULL)/**/
-                    {
-                        strcpy(mess_out.string, "Ok\n");
-                        err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
-                        if(err == -1)
-                        {
-                            printf("Error: send\n");
-                            exit(ERR_SEND);
-                        }
-                    }
-                }
-                else if(strcmp(tokens[0], "GET") == 0)
-                {
-                    pthread_mutex_lock(&border);
-                    node = rbtree_search(tree, tokens[1]);
-                    pthread_mutex_unlock(&border);
-                    if(node != NULL)/**/
-                    {
-                        sprintf(mess_out.string, "%d", node->data);
-                        err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
-                        if(err == -1)
-                        {
-                            printf("Error: send\n");
-                        }
-                    }
-                }
-                tokens[0] = "\0";
-                tokens[1] = "\0";
-                tokens[2] = "\0";
-            }
+          time_variable = atoi(tokens[2]);
+          pthread_mutex_lock(&border);
+          tree = rbtree_adding(tree, tokens[1], time_variable);
+          pthread_mutex_unlock(&border);
+          if(tree != NULL)/**/
+          {
+              strcpy(mess_out.string, "OK\n");
+              err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
+              if(err == -1)
+              {
+                  printf("Error: send\n");
+                  exit(ERR_SEND);
+              }
+          }
         }
+        else if(0 == strcmp(tokens[0], "GET"))
+        {
+          pthread_mutex_lock(&border);
+          node = rbtree_search(tree, tokens[1]);
+          pthread_mutex_unlock(&border);
+          if(node != NULL)/**/
+          {
+              sprintf(mess_out.string, "%d\n", node->data);
+              err = send(pth_file_descript[*number_pthread],  &mess_out, sizeof(struct message), 0);
+              if(err == -1)
+              {
+                  printf("Error: send\n");
+              }
+          }
+        }
+        for(counter = 0; counter < count_tokens; counter++)
+        {
+          free(tokens[counter]);
+          tokens[counter] = NULL;
+        }
+        free(tokens);
+        tokens = NULL;
     }
     err = close(pth_file_descript[*number_pthread]);
     if(err != 0)
@@ -215,11 +223,13 @@ void *flow_clients(void *data_input)
         printf("PTH_FL %d\n", *number_pthread);
         exit(-1);
     }
-    for(i = 0; i < 3; i++)
+    for(counter = 0; counter < count_tokens; counter++)
     {
-        free(tokens[i]);
+      free(tokens[counter]);
+      tokens[counter] = NULL;
     }
     free(tokens);
+    tokens = NULL;
     /*Функция очистки дерева*/
     pthread_exit(0);
 }

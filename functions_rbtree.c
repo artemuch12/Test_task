@@ -1,213 +1,184 @@
 /*Файл содержащий реализацию всех функций используемых в сервере*/
 #include <malloc.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+
 #include "include/functions_rbtree.h"
-#include "include/functions_strings.h"
+
 
 
 
 /*Функция поворота налево*/
-struct rbtree *left_rotate(struct rbtree *root, struct rbtree *node)
+struct rbtree *left_rotate(struct rbtree *root, struct rbtree *x)
 {
-    struct rbtree *right = node->right;
-    node->right = right->left;
-    if (right->left != null_node)
+  if((x->right != null_node) && (x->right != NULL))
+  {
+    struct rbtree *y = NULL;
+    y = x->right;
+    x->right = y->left;
+    if(y->left != null_node)
     {
-        right->left->parent = node;
+      y->left->parent = x;
     }
-    if (right != null_node)
+    y->parent = x->parent;
+    if(x->parent == null_node)
     {
-        right->parent = node->parent;
+      root = y;
     }
-    if (node->parent != null_node)
+    else if(x == x->parent->left)
     {
-        if (node == node->parent->left)
-        {
-            node->parent->left = right;
-        }
-        else
-        {
-            node->parent->right = right;
-        }
+      x->parent->left = y;
     }
     else
     {
-        root = right;
+      x->parent->right = y;
     }
-    right->left = node;
-    if(node != null_node)
-    {
-        node->parent = right;
-    }
+    y->left = x;
+    x->parent = y;
     return root;
+  }
 }
 /*Функция поворота направо*/
-struct rbtree *right_rotate(struct rbtree *root, struct rbtree *node)
+struct rbtree *right_rotate(struct rbtree *root, struct rbtree *x)
 {
-    struct rbtree *left = node->left;
-    node->left = left->right;
-    if (left->right != null_node)
+  if((x->left != null_node) && (x->left != NULL))
+  {
+    struct rbtree *y = NULL;
+    y = x->left;
+    x->left = y->right;
+    if(y->right != null_node)
     {
-        left->right->parent = node;
+      y->right->parent = x;
     }
-    if (left != null_node)
+    y->parent = x->parent;
+    if(x->parent == null_node)
     {
-        left->parent = node->parent;
+      root = y;
     }
-    if (node->parent != null_node)
+    else if(x == x->parent->right)
     {
-        if (node == node->parent->right)
-        {
-            node->parent->right = left;
-        }
-        else
-        {
-            node->parent->left = left;
-        }
+      x->parent->right = y;
     }
     else
     {
-        root = left;
+      x->parent->left = y;
     }
-    left->right = node;
-    if(node != null_node)
-    {
-        node->parent = left;
-    }
+    y->right = x;
+    x->parent = y;
     return root;
+  }
 }
 /*Функция вствавки в красно-черное дерево нового узла*/
 struct rbtree *rbtree_adding(struct rbtree *root, char *keys, int data)
 {
-    int lenght;
-    struct rbtree *node = null_node;
-    struct rbtree *parent = null_node;
-
-    for(node = root; (node != null_node) && (node != NULL); )
+  struct rbtree *z = NULL;
+  struct rbtree *y = NULL;
+  struct rbtree *x = NULL;
+  y = null_node;
+  x = root;
+  while ((x != null_node) && (x != NULL))
+  {
+    y = x;
+    if(0 < string_compreson(keys, x->key))
     {
-        parent = node;
-        if(0 < string_compreson(keys, node->key))
-        {
-            node = node->left;
-        }
-        else if(0 > string_compreson(keys, node->key))
-        {
-            node = node->right;
-        }
-        else if(0 == string_compreson(keys, node->key)) //Если ключ узла совпадает с искомым
-        {
-            //ключом, то его поле дата изменяется,
-            node->data = data;                 //на то значение которое передовалось в
-            root = node;                       //функцию.
-            return root;
-        }
-        else
-        {
-            return root;
-        }
+      x = x->left;
     }
-    node = malloc(sizeof(*node));
-    if(node == NULL)
+    else if(0 > string_compreson(keys, x->key))
     {
-        return NULL;
-    }
-    lenght = strlen(keys);
-    node->key = malloc(sizeof(char)*lenght);
-    strcpy(node->key, keys);
-    node->data = data;
-    node->color = RED;
-    node->parent = parent;
-    node->left = null_node;
-    node->right = null_node;
-    if(parent != null_node)
-    {
-        if(parent != null_node)
-        {
-            parent->left = node;
-        }
-        else
-        {
-            parent->right = node;
-        }
+      x = x->right;
     }
     else
     {
-        root = node;
+      x->data = data;
+      return root;
     }
-    return rbtree_fix_add(root, node);
+  }
+  z = malloc(sizeof(*z));
+  z->parent = y;
+  strcpy(z->key, keys);
+  z->data = data;
+  z->left = null_node;
+  z->right = null_node;
+  z->color = RED;
+  if((y == null_node) || (y == NULL))
+  {
+    root = z;
+  }
+  else if(0 < string_compreson(z->key, y->key))
+  {
+    y->left = z;
+  }
+  else
+  {
+    y->right = z;
+  }
+
+  //return root;
+  return rbtree_fix_add(root, z);
 }
 /*Функция востановления свойств красно-черного дерева после установки нового
 узла*/
-struct rbtree *rbtree_fix_add(struct rbtree *root, struct rbtree *node)
+struct rbtree *rbtree_fix_add(struct rbtree *root, struct rbtree *z)
 {
-    struct rbtree *uncle;
-    while ((node != root) && (node->parent->color == RED))
+  struct rbtree *y;
+  while ((z->parent->color == RED) && (root != z))
+  {
+    if(z->parent == z->parent->parent->left)
     {
-        if(node->parent == node->parent->parent->left)
+      y = z->parent->parent->right;
+      if(y->color == RED)
+      {
+        z->parent->color = BLACK;
+        y->color = BLACK;
+        z->parent->parent->color = RED;
+        z = z->parent->parent;
+      }
+      else
+      {
+        if(z == z->parent->right)
         {
-            uncle = node->parent->parent->right;
-            if(uncle->color == RED)
-            {
-                node->parent->color = BLACK;
-                uncle->color = BLACK;
-                node->parent->parent->color = RED;
-                node = node->parent->parent;
-            }
-            else
-            {
-                if(node == node->parent->right)
-                {
-                    node = node->parent;
-                    root = left_rotate(root, node);
-                }
-                node->parent->color = BLACK;
-                node->parent->parent->color = RED;
-                root = right_rotate(root, node->parent->parent);
-            }
+          z = z->parent;
+          root = left_rotate(root, z);
         }
-        else
-        {
-            uncle = node->parent->parent->left;
-            if(uncle->color == RED)
-            {
-                node->parent->color = BLACK;
-                uncle->color = BLACK;
-                node->parent->parent->color = RED;
-                node = node->parent->parent;
-            }
-            else
-            {
-                if(node == node->parent->left)
-                {
-                    node = node->parent;
-                    root = right_rotate(root, node);
-                }
-                node->parent->color = BLACK;
-                node->parent->parent->color = RED;
-                root = left_rotate(root, node->parent->parent);
-            }
-        }
+        z->parent->color = BLACK;
+        z->parent->parent->color = RED;
+        root = right_rotate(root, z->parent->parent);
+      }
     }
-    root->color = BLACK;
-    return root;
+    else
+    {
+      y = z->parent->parent->left;
+      if(y->color == RED)     /**/
+      {
+        z->parent->color = BLACK;
+        y->color = BLACK;
+        z->parent->parent->color = RED;
+        z = z->parent->parent;
+      }
+      else
+      {
+        if(z == z->parent->left)
+        {
+          z = z->parent;
+          root = right_rotate(root, z);
+        }
+        z->parent->color = BLACK;
+        z->parent->parent->color = RED;
+        root = left_rotate(root, z->parent->parent);
+      }
+    }
+
+  }
+  root->color = BLACK;
+  return root;
 }
 
 /*Функция поиска узла по ключу*/
 /*Если ключ совпадает с ключом узла, то */
 struct rbtree *rbtree_search(struct rbtree *root, char *keys)
 {
-    struct rbtree *node = null_node;
+    struct rbtree *node = NULL;
     for(node = root; (node != null_node) && (node != NULL); )
     {
         if(0 < string_compreson(keys, node->key))
@@ -235,14 +206,80 @@ void rbtree_delete(struct rbtree *root)
 {
     if((root != NULL) && (root != null_node))
     {
-        if((root->left != NULL) && (root->left != null_node))
-        {
-            rbtree_delete(root->left);
-        }
-        if((root->right != NULL) && (root->right != null_node))
-        {
-            rbtree_delete(root->right);
-        }
+        rbtree_delete(root->left);
+        rbtree_delete(root->right);
         free(root);
+    }
+}
+/*Функция сравнивает две строки, для определения их соответсвия между ними. На
+первом этапе сравнивается длина строк. Если одна строк длиннее другой, то на
+выход функции отправляется число: -1 если "левая" строка больше "правой", в об-
+ратном случае отпраляется 1. В случае если обе строки равны по длине, то насту-
+пает следующий этап: посимвольное сравнение. Если какой-то либо символ, оказы-
+вается больше, чем в другой строке в аналогичной позиции, то функция возвращает
+единицу, если меньше, то -1. Если после перебора всех символов не находится от-
+личных сиволов, между двумя строками, то функция возвращает 0.*/
+/*Входные данные: 2 строки, заканчивающиеся на символы'/0' и '/n'.*/
+/*Выходные данные: число из ряда: -1, 0, 1*/
+int string_compreson(char *string_1, char *string_2)
+{
+    int len_str_1, len_str_2;
+    int out_data;
+    int counter;
+    int symbol_str_1, symbol_str_2;
+
+    len_str_1 = strlen(string_1);
+    len_str_2 = strlen(string_2);
+
+    if (len_str_1 < len_str_2)
+    {
+      for(counter = 0; counter < len_str_1; counter++)
+      {
+          symbol_str_1 = (int )string_1[counter];
+          symbol_str_2 = (int )string_2[counter];
+          if (symbol_str_1 < symbol_str_2)
+          {
+              return 1;
+          }
+          if (symbol_str_1 > symbol_str_2)
+          {
+              return -1;
+          }
+      }
+      return 1;
+    }
+    if (len_str_1 > len_str_2)
+    {
+      for(counter = 0; counter < len_str_2; counter++)
+      {
+          symbol_str_1 = (int )string_1[counter];
+          symbol_str_2 = (int )string_2[counter];
+          if (symbol_str_1 < symbol_str_2)
+          {
+              return 1;
+          }
+          if (symbol_str_1 > symbol_str_2)
+          {
+              return -1;
+          }
+      }
+      return -1;
+    }
+    if (len_str_1 == len_str_2)
+    {
+      for(counter = 0; counter < len_str_1; counter++)
+      {
+          symbol_str_1 = (int )string_1[counter];
+          symbol_str_2 = (int )string_2[counter];
+          if (symbol_str_1 < symbol_str_2)
+          {
+              return 1;
+          }
+          if (symbol_str_1 > symbol_str_2)
+          {
+              return -1;
+          }
+      }
+      return 0;
     }
 }

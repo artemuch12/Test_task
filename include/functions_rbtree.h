@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+
 /*Константы связанные с ошибками*/
 #define MAX_CLIENT_QUEUE 2
 #define ERR_SOCKET 1
@@ -21,14 +23,14 @@
 
 struct rbtree
 {
-  char *key;
+  char key[255];
   int data;
   int color;
   struct rbtree *parent;
   struct rbtree *left;
   struct rbtree *right;
 };
-static struct rbtree empty_node = {0, 0, BLACK, NULL, NULL, NULL};
+static struct rbtree empty_node = {"0", 0, BLACK, NULL, NULL, NULL};
 static struct rbtree *null_node = &empty_node;
 
 /*Прототипы функция для работы красно-черного дерева*/
@@ -38,3 +40,4 @@ struct rbtree *rbtree_adding(struct rbtree *, char *, int );
 struct rbtree *rbtree_fix_add(struct rbtree *, struct rbtree *);
 struct rbtree *rbtree_search(struct rbtree *, char *);
 void rbtree_delete(struct rbtree *);
+int string_compreson(char *, char *);

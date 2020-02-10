@@ -10,6 +10,5 @@ struct message
 };
 
 /*Прототипы функций обработки строк*/
-void check_tokens(char **);
-void string_tokens(char *, char **);
-int string_compreson(char *, char *);
+int string_counter_token(char *);
+char **string_checking(char *, int );
