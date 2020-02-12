@@ -42,7 +42,7 @@ char **string_checking(char *string, int count_tokens)
         if(string[counter] != ' ')
         {
             lexem[counter_tokens] = (char *)realloc(lexem[counter_tokens],
-                izeof(char)*(inner_counter+1));
+                sizeof(char)*(inner_counter+1));
             lexem[counter_tokens][inner_counter] = string[counter];
             inner_counter = inner_counter + 1;
             lexem[counter_tokens][inner_counter] = '\0';

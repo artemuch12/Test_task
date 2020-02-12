@@ -29,11 +29,11 @@ struct sockaddr_in server;
 
 struct rbtree *tree = NULL;
 
-pthread_t sock_recv[MAX_CLIENT];
+pthread_t *sock_recv = NULL;
 pthread_mutex_t border = PTHREAD_MUTEX_INITIALIZER;
 int flag = 0;
 int file_descript;
-int pth_file_descript[MAX_CLIENT];
+int *pth_file_descript = NULL;
 
 void handler_sigterm(int, siginfo_t *, void *);
 void *flow_clients(void *);
@@ -43,7 +43,7 @@ int main(int argc, char const *argv[])
     struct pollfd time_out;
     struct sigaction signal_sigtrem;
     void **status = NULL;
-    int number_pthread[MAX_CLIENT];
+    int *number_pthread = NULL;
     int counter_pthread;
     int select_fd;
     int err;
@@ -75,6 +75,9 @@ int main(int argc, char const *argv[])
     bind(file_descript, (struct sockaddr *)&server, addr_in_size);
     listen(file_descript, MAX_CLIENT_QUEUE);
     counter_pthread = 0;
+    number_pthread = (int *)malloc(1*sizeof(int));
+    pth_file_descript = (int *)malloc(1*sizeof(int));
+    sock_recv = (pthread_t *)malloc(1*sizeof(pthread_t));
     number_pthread[counter_pthread] = counter_pthread;
     time_out.fd = file_descript;
     time_out.events = POLLIN;
@@ -96,6 +99,9 @@ int main(int argc, char const *argv[])
             pthread_create(&sock_recv[counter_pthread], NULL, flow_clients,
                 &number_pthread[counter_pthread]);
             counter_pthread++;
+            number_pthread = (int *)realloc(number_pthread, (counter_pthread+1)*sizeof(int));
+            pth_file_descript = (int *)realloc(pth_file_descript, (counter_pthread+1)*sizeof(int));
+            sock_recv = (pthread_t *)realloc(sock_recv, (counter_pthread+1)*sizeof(pthread_t));
             number_pthread[counter_pthread] = counter_pthread;
         }
     }
@@ -110,14 +116,15 @@ int main(int argc, char const *argv[])
         close(pth_file_descript[i]);
 
     }
+    free(number_pthread);
+    number_pthread = NULL;
+    free(pth_file_descript);
+    pth_file_descript = NULL;
+    free(sock_recv);
+    sock_recv = NULL;
     rbtree_delete(tree);
     pthread_mutex_destroy(&border);
-    err = close(file_descript);
-    if(err != 0)
-    {
-        puts("Error: pthread file descript close");
-        exit(ERR_CLOSE);
-    }
+    close(file_descript);
     return 0;
 }
 

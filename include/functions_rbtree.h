@@ -7,7 +7,6 @@
 
 
 /*Константы связанные с ошибками*/
-#define MAX_CLIENT 10
 #define MAX_CLIENT_QUEUE 2
 #define ERR_SOCKET 1
 #define ERR_MALLOC 2
