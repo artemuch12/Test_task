@@ -6,9 +6,6 @@
 
 #include "include/functions_rbtree.h"
 
-
-
-
 /*Функция поворота налево*/
 struct rbtree *left_rotate(struct rbtree *root, struct rbtree *x)
 {
@@ -69,7 +66,8 @@ struct rbtree *right_rotate(struct rbtree *root, struct rbtree *x)
         return root;
     }
 }
-/*Функция вствавки в красно-черное дерево нового узла*/
+/*Функция вствавки в красно-черное дерево нового узла или замены содежимого при
+совпадении ключей*/
 struct rbtree *rbtree_adding(struct rbtree *root, char *keys, int data)
 {
     struct rbtree *z = NULL;
@@ -175,7 +173,6 @@ struct rbtree *rbtree_fix_add(struct rbtree *root, struct rbtree *z)
 }
 
 /*Функция поиска узла по ключу*/
-/*Если ключ совпадает с ключом узла, то */
 struct rbtree *rbtree_search(struct rbtree *root, char *keys)
 {
     struct rbtree *node = NULL;

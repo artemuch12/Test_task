@@ -7,7 +7,7 @@
 
 #include "include/functions_strings.h"
 
-
+/*Функция определяющая число слов по количеству пробелов*/
 int string_counter_token(char *string)
 {
     int counter_tokens;
@@ -23,7 +23,7 @@ int string_counter_token(char *string)
     return (counter_tokens + 1);
 }
 
-
+/*Функция разделения строки на отдельные слова*/
 char **string_checking(char *string, int count_tokens)
 {
     char **lexem = NULL;
@@ -42,7 +42,7 @@ char **string_checking(char *string, int count_tokens)
         if(string[counter] != ' ')
         {
             lexem[counter_tokens] = (char *)realloc(lexem[counter_tokens],
-                                                    sizeof(char)*(inner_counter+1));
+                izeof(char)*(inner_counter+1));
             lexem[counter_tokens][inner_counter] = string[counter];
             inner_counter = inner_counter + 1;
             lexem[counter_tokens][inner_counter] = '\0';

@@ -1,4 +1,4 @@
-/*Заголовочный файл содержащий прототипы всех вызываемых функций*/
+/*Заголовочный файл содержащий прототипы всех функций связанных с КЧД*/
 #include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +7,7 @@
 
 
 /*Константы связанные с ошибками*/
+#define MAX_CLIENT 10
 #define MAX_CLIENT_QUEUE 2
 #define ERR_SOCKET 1
 #define ERR_MALLOC 2
