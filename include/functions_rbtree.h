@@ -1,4 +1,7 @@
 /*Заголовочный файл содержащий прототипы всех функций связанных с КЧД*/
+#ifndef FUNCTION_RBREE_H
+#define FUNCTION_RBREE_H
+
 #include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,3 +44,5 @@ struct rbtree *rbtree_fix_add(struct rbtree *, struct rbtree *);
 struct rbtree *rbtree_search(struct rbtree *, char *);
 void rbtree_delete(struct rbtree *);
 int string_compreson(char *, char *);
+
+#endif
